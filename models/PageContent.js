@@ -4,7 +4,6 @@ const pageContentSchema = new mongoose.Schema({
   pageName: {
     type: String,
     required: true,
-    unique: true, // each page only has 1 content
     trim: true,
   },
   description: {
