@@ -86,6 +86,14 @@ app.use("/api/page-contents", pageContentRoutes);
 app.use("/api/spa-categories", spaCategoryRoutes);
 app.use("/api/questionnaires", questionnaireRoutes);
 
+// 🔹 Gestionnaire d’erreurs global (middleware 4 arguments)
+app.use((err, req, res, next) => {
+  console.error("❌ Route error:", err.message);
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Erreur serveur";
+  res.status(status).json({ message });
+});
+
 // 🔹 Protected route example
 const authenticateToken = require("./middleware/authMiddleware");
 app.get("/api/protected", authenticateToken, (req, res) => {

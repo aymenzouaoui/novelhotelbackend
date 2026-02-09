@@ -6,13 +6,30 @@ exports.createPageContent = async (req, res) => {
     const { pageName, description } = req.body;
     const image = req.file ? req.file.path : "";
 
-    const pageContent = new PageContent({ pageName, description, image });
+    if (!pageName || String(pageName).trim() === "") {
+      return res.status(400).json({ message: "pageName est obligatoire" });
+    }
+
+    const pageContent = new PageContent({
+      pageName: String(pageName).trim(),
+      description: description != null ? String(description) : "",
+      image: image || "",
+    });
     await pageContent.save();
 
     res.status(201).json(pageContent);
   } catch (err) {
     console.error("❌ Error creating page content:", err.message);
-    res.status(500).json({ message: err.message });
+    if (err.name === "ValidationError") {
+      const message = Object.values(err.errors || {}).map((e) => e.message).join(", ");
+      return res.status(400).json({ message: message || err.message });
+    }
+    if (err.code === 11000) {
+      return res.status(409).json({
+        message: "Un contenu avec ce nom de page existe déjà. Supprimez l’index unique pageName dans MongoDB si vous voulez autoriser les doublons.",
+      });
+    }
+    res.status(500).json({ message: err.message || "Erreur serveur" });
   }
 };
 // GET ALL
