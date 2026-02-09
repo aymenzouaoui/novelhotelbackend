@@ -6,16 +6,35 @@ exports.createPageContent = async (req, res) => {
     const { pageName, description } = req.body;
     const image = req.file ? req.file.path : "";
 
-    const pageContent = new PageContent({ pageName, description, image });
-    await pageContent.save();
+    // Check if document exists to determine status code
+    const existingContent = await PageContent.findOne({ pageName });
+    const isNew = !existingContent;
 
-    res.status(201).json(pageContent);
+    // Use findOneAndUpdate with upsert for atomic operation (prevents race conditions)
+    const updateData = {};
+    if (description !== undefined) {
+      updateData.description = description;
+    }
+    if (image) {
+      updateData.image = image;
+    }
+
+    const pageContent = await PageContent.findOneAndUpdate(
+      { pageName },
+      { $set: updateData },
+      { 
+        new: true, 
+        upsert: true, 
+        runValidators: true 
+      }
+    );
+
+    res.status(isNew ? 201 : 200).json(pageContent);
   } catch (err) {
     console.error("❌ Error creating page content:", err.message);
     res.status(500).json({ message: err.message });
   }
 };
-
 // GET ALL
 exports.getAllPageContents = async (req, res) => {
   try {
