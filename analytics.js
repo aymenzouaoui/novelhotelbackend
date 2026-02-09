@@ -3,9 +3,13 @@ const { BetaAnalyticsDataClient } = require("@google-analytics/data");
 require("dotenv").config();
 
 const router = express.Router();
-
+/*
 const analyticsDataClient = new BetaAnalyticsDataClient({
   credentials: JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON),
+});
+*/
+const analyticsDataClient = new BetaAnalyticsDataClient({
+  keyFilename: "./ga-key.json", // chemin vers ton fichier JSON
 });
 
 const PROPERTY_ID = process.env.GA4_PROPERTY_ID;
@@ -42,3 +46,4 @@ router.get("/views", async (req, res) => {
 });
 
 module.exports = router;
+
