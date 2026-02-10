@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 
 const itemSchema = new mongoose.Schema({
+  order: {
+    type: Number,
+    default: 0,
+  },
   name: String,
   description: String,
   price: Number,

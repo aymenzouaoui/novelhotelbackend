@@ -3,6 +3,12 @@ const PDFDocument = require("pdfkit");
 const fs = require("fs");
 const path = require("path");
 
+function sortItemsByOrder(menu) {
+  if (!menu || !menu.items || !menu.items.length) return menu;
+  const sorted = [...menu.items].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  return { ...menu.toObject ? menu.toObject() : menu, items: sorted };
+}
+
 exports.createMenu = async (req, res) => {
   try {
     // Log the full request body
@@ -48,7 +54,7 @@ exports.createMenu = async (req, res) => {
 
     console.log("🎉 Menu saved successfully:", menu);
 
-    res.status(201).json(menu);
+    res.status(201).json(sortItemsByOrder(menu));
   } catch (err) {
     console.error("❌ Menu creation error:", err.message);
     res.status(500).json({ message: err.message });
@@ -59,8 +65,9 @@ exports.createMenu = async (req, res) => {
 
 exports.getAllMenus = async (req, res) => {
   try {
-    const menus = await Menu.find().populate("restaurant", "name"); // Populate restaurant name
-    res.status(200).json(menus);
+    const menus = await Menu.find().populate("restaurant", "name");
+    const sorted = menus.map((m) => sortItemsByOrder(m));
+    res.status(200).json(sorted);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -70,7 +77,7 @@ exports.getMenuById = async (req, res) => {
   try {
     const menu = await Menu.findById(req.params.id).populate("restaurant", "name");
     if (!menu) return res.status(404).json({ message: "Menu not found" });
-    res.status(200).json(menu);
+    res.status(200).json(sortItemsByOrder(menu));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -129,7 +136,7 @@ exports.updateMenu = async (req, res) => {
     const io = req.app.get("io");
     io.emit("menuUpdated", menu);
 
-    res.status(200).json(menu);
+    res.status(200).json(sortItemsByOrder(menu));
   } catch (err) {
     console.error("❌ Menu update error:", err.message);
     res.status(500).json({ message: err.message });
@@ -163,7 +170,8 @@ exports.downloadMenuPDF = async (req, res) => {
     doc.pipe(fs.createWriteStream(filePath));
     doc.fontSize(20).text(menu.title, { align: "center" }).moveDown();
 
-    menu.items.forEach(item => {
+    const sortedItems = [...(menu.items || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    sortedItems.forEach(item => {
       doc
         .fontSize(14)
         .text(`${item.name} - $${item.price.toFixed(2)}`)
