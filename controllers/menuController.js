@@ -86,7 +86,7 @@ exports.updateMenu = async (req, res) => {
 
     console.log("📥 Update Menu Request - existingImages:", existingImages);
     console.log("📥 Update Menu Request - files:", req.files ? req.files.length : 0);
-
+ console.log("📥 Update Menu Request - order:", order);
     // First get the current menu (for validation only)
     const currentMenu = await Menu.findById(req.params.id);
     if (!currentMenu) return res.status(404).json({ message: "Menu not found" });
