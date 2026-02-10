@@ -6,31 +6,80 @@ const itemSchema = new mongoose.Schema({
   price: Number,
   isVegetarian: {
     type: Boolean,
-    default: false, // default is non-vegetarian unless specified
+    default: false,
   },
   isOrganic: {
     type: Boolean,
-    default: false, // default is not organic
+    default: false,
   },
   isLocal: {
     type: Boolean,
-    default: false, // default is not local
+    default: false,
   },
-  isGlutenFree: {
+  // 14 allergènes majeurs (réglementation UE) — sans gluten = !allergenGluten, sans lactose = !allergenLait
+  allergenArachide: {
     type: Boolean,
-    default: false, // default is not gluten-free
+    default: false,
   },
-  isLactoseFree: {
+  allergenCeleri: {
     type: Boolean,
-    default: false, // default is not lactose-free
+    default: false,
   },
-    isAvailable24_7: {
+  allergenCrustaces: {
     type: Boolean,
-    default: false, // default is not available 24/7
+    default: false,
   },
-    commandable: {
+  allergenGluten: {
     type: Boolean,
-    default: true, // default is commandable
+    default: false,
+  },
+  allergenFruitsANoque: {
+    type: Boolean,
+    default: false,
+  },
+  allergenLait: {
+    type: Boolean,
+    default: false,
+  },
+  allergenLupin: {
+    type: Boolean,
+    default: false,
+  },
+  allergenOeuf: {
+    type: Boolean,
+    default: false,
+  },
+  allergenPoisson: {
+    type: Boolean,
+    default: false,
+  },
+  allergenMollusques: {
+    type: Boolean,
+    default: false,
+  },
+  allergenMoutarde: {
+    type: Boolean,
+    default: false,
+  },
+  allergenSesame: {
+    type: Boolean,
+    default: false,
+  },
+  allergenSoja: {
+    type: Boolean,
+    default: false,
+  },
+  allergenSulfites: {
+    type: Boolean,
+    default: false,
+  },
+  isAvailable24_7: {
+    type: Boolean,
+    default: false,
+  },
+  commandable: {
+    type: Boolean,
+    default: true,
   },
 });
 
