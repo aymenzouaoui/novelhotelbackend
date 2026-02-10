@@ -3,12 +3,6 @@ const PDFDocument = require("pdfkit");
 const fs = require("fs");
 const path = require("path");
 
-function sortItemsByOrder(menu) {
-  if (!menu || !menu.items || !menu.items.length) return menu;
-  const sorted = [...menu.items].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  return { ...menu.toObject ? menu.toObject() : menu, items: sorted };
-}
-
 exports.createMenu = async (req, res) => {
   try {
     // Log the full request body
@@ -21,7 +15,7 @@ exports.createMenu = async (req, res) => {
       console.log("📁 No files uploaded");
     }
 
-    const { title, items, restaurant, roomService, skyLounge } = req.body;
+    const { title, items, restaurant, roomService, skyLounge, order } = req.body;
 
     // Parse items if sent as JSON string
     let parsedItems = [];
@@ -38,13 +32,15 @@ exports.createMenu = async (req, res) => {
     const images = req.files ? req.files.map(file => file.path) : [];
     console.log("🖼 Images paths:", images);
 
+    const orderNum = typeof order === "number" && !isNaN(order) ? order : (typeof order === "string" && order !== "" && !isNaN(Number(order)) ? Number(order) : 0);
     const menu = new Menu({
       title,
       items: parsedItems,
       images,
       restaurant,
       roomService,
-      skyLounge
+      skyLounge,
+      order: orderNum,
     });
 
     await menu.save();
@@ -54,7 +50,7 @@ exports.createMenu = async (req, res) => {
 
     console.log("🎉 Menu saved successfully:", menu);
 
-    res.status(201).json(sortItemsByOrder(menu));
+    res.status(201).json(menu);
   } catch (err) {
     console.error("❌ Menu creation error:", err.message);
     res.status(500).json({ message: err.message });
@@ -65,9 +61,8 @@ exports.createMenu = async (req, res) => {
 
 exports.getAllMenus = async (req, res) => {
   try {
-    const menus = await Menu.find().populate("restaurant", "name");
-    const sorted = menus.map((m) => sortItemsByOrder(m));
-    res.status(200).json(sorted);
+    const menus = await Menu.find().populate("restaurant", "name").sort({ order: 1 });
+    res.status(200).json(menus);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -77,7 +72,7 @@ exports.getMenuById = async (req, res) => {
   try {
     const menu = await Menu.findById(req.params.id).populate("restaurant", "name");
     if (!menu) return res.status(404).json({ message: "Menu not found" });
-    res.status(200).json(sortItemsByOrder(menu));
+    res.status(200).json(menu);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -85,9 +80,10 @@ exports.getMenuById = async (req, res) => {
 
 exports.updateMenu = async (req, res) => {
   try {
-    const { title, items, restaurant, roomService, skyLounge, existingImages } = req.body;
+    const { title, items, restaurant, roomService, skyLounge, existingImages, order } = req.body;
     const parsedItems = items ? JSON.parse(items) : [];
-    
+    const orderNum = typeof order === "number" && !isNaN(order) ? order : (typeof order === "string" && order !== "" && !isNaN(Number(order)) ? Number(order) : undefined);
+
     console.log("📥 Update Menu Request - existingImages:", existingImages);
     console.log("📥 Update Menu Request - files:", req.files ? req.files.length : 0);
 
@@ -128,15 +124,16 @@ exports.updateMenu = async (req, res) => {
       restaurant,
       roomService,
       skyLounge,
-      images: finalImages
+      images: finalImages,
     };
+    if (orderNum !== undefined) updateFields.order = orderNum;
 
     const menu = await Menu.findByIdAndUpdate(req.params.id, updateFields, { new: true });
 
     const io = req.app.get("io");
     io.emit("menuUpdated", menu);
 
-    res.status(200).json(sortItemsByOrder(menu));
+    res.status(200).json(menu);
   } catch (err) {
     console.error("❌ Menu update error:", err.message);
     res.status(500).json({ message: err.message });
@@ -170,8 +167,7 @@ exports.downloadMenuPDF = async (req, res) => {
     doc.pipe(fs.createWriteStream(filePath));
     doc.fontSize(20).text(menu.title, { align: "center" }).moveDown();
 
-    const sortedItems = [...(menu.items || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    sortedItems.forEach(item => {
+    (menu.items || []).forEach(item => {
       doc
         .fontSize(14)
         .text(`${item.name} - $${item.price.toFixed(2)}`)
