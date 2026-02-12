@@ -67,11 +67,13 @@ exports.getPageContentByPageName = async (req, res) => {
 // UPDATE
 exports.updatePageContent = async (req, res) => {
   try {
-    const { description } = req.body;
+    const { description, removeImage } = req.body;
     const updateFields = { description };
 
     if (req.file) {
       updateFields.image = req.file.path;
+    } else if (removeImage === "true") {
+      updateFields.image = "";
     }
 
     const content = await PageContent.findByIdAndUpdate(req.params.id, updateFields, { new: true });
