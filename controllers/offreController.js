@@ -1,9 +1,22 @@
 const OffreSpeciale = require("../models/OffreSpeciale");
 
+// Helper function to detect media type from file extension
+function detectMediaType(filename) {
+  if (!filename) return null;
+  const ext = filename.toLowerCase().split('.').pop();
+  const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+  const videoExts = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv', 'm4v'];
+  
+  if (imageExts.includes(ext)) return 'image';
+  if (videoExts.includes(ext)) return 'video';
+  return null;
+}
+
 exports.createOffre = async (req, res) => {
   try {
     const { title, description, discountPercentage, startDate, endDate, active } = req.body;
-    const image = req.file ? req.file.path : "";
+    const media = req.file ? req.file.path : "";
+    const mediaType = req.file ? detectMediaType(req.file.originalname) : null;
 
     const offre = new OffreSpeciale({
       title,
@@ -12,7 +25,10 @@ exports.createOffre = async (req, res) => {
       startDate,
       endDate,
       active,
-      image,
+      media,
+      mediaType,
+      // Keep image for backward compatibility
+      image: media && mediaType === 'image' ? media : "",
     });
 
     await offre.save();
@@ -58,7 +74,15 @@ exports.updateOffre = async (req, res) => {
     };
 
     if (req.file) {
-      updateFields.image = req.file.path;
+      const mediaType = detectMediaType(req.file.originalname);
+      updateFields.media = req.file.path;
+      updateFields.mediaType = mediaType;
+      // Keep image for backward compatibility if it's an image
+      if (mediaType === 'image') {
+        updateFields.image = req.file.path;
+      } else {
+        updateFields.image = "";
+      }
     }
 
     const offre = await OffreSpeciale.findByIdAndUpdate(req.params.id, updateFields, { new: true });

@@ -10,8 +10,8 @@ const {
   deleteOffre
 } = require("../controllers/offreController");
 
-router.post("/", upload.single("image"), createOffre); // ✅ support file upload
-router.put("/:id", upload.single("image"), updateOffre); // ✅ update with image
+router.post("/", upload.single("media"), createOffre); // ✅ support image or video upload
+router.put("/:id", upload.single("media"), updateOffre); // ✅ update with image or video
 router.get("/", getAllOffres);
 router.get("/:id", getOffreById);
 router.delete("/:id", deleteOffre);
