@@ -14,9 +14,80 @@ function detectMediaType(filename) {
 
 exports.createOffre = async (req, res) => {
   try {
-    const { title, description, discountPercentage, startDate, endDate, active } = req.body;
-    const media = req.file ? req.file.path : "";
-    const mediaType = req.file ? detectMediaType(req.file.originalname) : null;
+    // 🔍 LOG: Request body and files
+    console.log("📥 CREATE OFFRE - Request body:", {
+      title: req.body.title,
+      description: req.body.description,
+      discountPercentage: req.body.discountPercentage,
+      startDate: req.body.startDate,
+      endDate: req.body.endDate,
+      active: req.body.active,
+      mediaType: req.body.mediaType,
+      existingImages: req.body.existingImages
+    });
+    
+    console.log("📁 CREATE OFFRE - Request files:", req.files ? Object.keys(req.files) : "No files");
+    if (req.files) {
+      Object.keys(req.files).forEach(key => {
+        console.log(`  - ${key}:`, req.files[key].map(f => ({ name: f.originalname, size: f.size })));
+      });
+    }
+
+    const { title, description, discountPercentage, startDate, endDate, active, mediaType: bodyMediaType, existingImages } = req.body;
+    
+    let images = [];
+    let video = "";
+    let media = "";
+    let finalMediaType = null;
+
+    if (req.files) {
+      if (req.files["images"] && req.files["images"].length > 0) {
+        images = req.files["images"].map((f) => f.path);
+        media = images[0] || "";
+        finalMediaType = "image";
+        console.log(`✅ Using 'images' field - ${req.files["images"].length} files received:`);
+        req.files["images"].forEach((f, idx) => {
+          console.log(`   [${idx + 1}] ${f.originalname} -> ${f.path}`);
+        });
+        console.log(`✅ All ${images.length} images paths:`, images);
+      } else if (req.files["video"] && req.files["video"].length > 0) {
+        const videoFile = req.files["video"][0];
+        video = videoFile.path;
+        media = video;
+        finalMediaType = "video";
+        console.log("✅ Using 'video' field:", videoFile.originalname);
+      } else if (req.files["media"] && req.files["media"].length > 0) {
+        const file = req.files["media"][0];
+        media = file.path;
+        finalMediaType = detectMediaType(file.originalname);
+        if (finalMediaType === "image") {
+          images = [media];
+        } else if (finalMediaType === "video") {
+          video = media;
+        }
+        console.log("✅ Using 'media' field:", file.originalname);
+      } else if (req.files["image"] && req.files["image"].length > 0) {
+        const file = req.files["image"][0];
+        media = file.path;
+        finalMediaType = detectMediaType(file.originalname) || "image";
+        images = [media];
+        console.log("✅ Using 'image' field:", file.originalname);
+      }
+    }
+
+    // If body explicitly says video/images, trust it when no file-type ambiguity
+    if (!finalMediaType && bodyMediaType) {
+      if (bodyMediaType === "video") finalMediaType = "video";
+      if (bodyMediaType === "images") finalMediaType = "image";
+    }
+
+    console.log("📤 CREATE OFFRE - Final values:", {
+      media,
+      mediaType: finalMediaType,
+      imagesCount: images.length,
+      images: images, // Show all image URLs
+      hasVideo: !!video,
+    });
 
     const offre = new OffreSpeciale({
       title,
@@ -26,19 +97,25 @@ exports.createOffre = async (req, res) => {
       endDate,
       active,
       media,
-      mediaType,
-      // Keep image for backward compatibility
-      image: media && mediaType === 'image' ? media : "",
+      mediaType: finalMediaType,
+      images,
+      video,
+      // Keep image for backward compatibility (first image only)
+      image: media && finalMediaType === "image" ? media : "",
     });
 
+    console.log("💾 CREATE OFFRE - Saving offre with images array:", offre.images);
     await offre.save();
+    console.log("✅ CREATE OFFRE - Saved offre, verifying images in DB:", offre.images);
 
     const io = req.app.get("io");
     io.emit("offreCreated", offre);
 
+    console.log("✅ CREATE OFFRE - Success, offre ID:", offre._id);
     res.status(201).json(offre);
   } catch (err) {
     console.error("❌ Error creating offer:", err.message);
+    console.error("❌ Error stack:", err.stack);
     res.status(500).json({ message: err.message });
   }
 };
@@ -64,25 +141,118 @@ exports.getOffreById = async (req, res) => {
 
 exports.updateOffre = async (req, res) => {
   try {
-    const updateFields = {
+    // 🔍 LOG: Request body and files
+    console.log("📥 UPDATE OFFRE - ID:", req.params.id);
+    console.log("📥 UPDATE OFFRE - Request body:", {
       title: req.body.title,
       description: req.body.description,
       discountPercentage: req.body.discountPercentage,
       startDate: req.body.startDate,
       endDate: req.body.endDate,
       active: req.body.active,
+      mediaType: req.body.mediaType,
+      existingImages: req.body.existingImages
+    });
+    
+    console.log("📁 UPDATE OFFRE - Request files:", req.files ? Object.keys(req.files) : "No files");
+    if (req.files) {
+      Object.keys(req.files).forEach(key => {
+        console.log(`  - ${key}:`, req.files[key].map(f => ({ name: f.originalname, size: f.size })));
+      });
+    }
+
+    const { title, description, discountPercentage, startDate, endDate, active, mediaType: bodyMediaType, existingImages } = req.body;
+    
+    const updateFields = {
+      title,
+      description,
+      discountPercentage,
+      startDate,
+      endDate,
+      active,
     };
 
-    if (req.file) {
-      const mediaType = detectMediaType(req.file.originalname);
-      updateFields.media = req.file.path;
-      updateFields.mediaType = mediaType;
+    let images = [];
+    let video = "";
+    let media = "";
+    let finalMediaType = null;
+
+    // Start from existingImages (JSON from frontend) if provided
+    if (existingImages) {
+      try {
+        const parsed = JSON.parse(existingImages);
+        if (Array.isArray(parsed)) {
+          images = parsed;
+        }
+      } catch (e) {
+        console.warn("⚠️ Failed to parse existingImages:", e.message);
+      }
+    }
+
+    if (req.files) {
+      if (req.files["images"] && req.files["images"].length > 0) {
+        const newImages = req.files["images"].map((f) => f.path);
+        images = [...images, ...newImages];
+        media = images[0] || "";
+        finalMediaType = "image";
+        console.log("✅ Using 'images' field, files:", req.files["images"].map(f => f.originalname));
+        // When new images are uploaded, clear any video
+        video = "";
+      } else if (req.files["video"] && req.files["video"].length > 0) {
+        const videoFile = req.files["video"][0];
+        video = videoFile.path;
+        media = video;
+        finalMediaType = "video";
+        console.log("✅ Using 'video' field:", videoFile.originalname);
+        // When a video is uploaded, clear images
+        images = [];
+      } else if (req.files["media"] && req.files["media"].length > 0) {
+        const file = req.files["media"][0];
+        media = file.path;
+        finalMediaType = detectMediaType(file.originalname);
+        if (finalMediaType === "image") {
+          images = [media];
+          video = "";
+        } else if (finalMediaType === "video") {
+          video = media;
+          images = [];
+        }
+        console.log("✅ Using 'media' field:", file.originalname);
+      } else if (req.files["image"] && req.files["image"].length > 0) {
+        const file = req.files["image"][0];
+        media = file.path;
+        finalMediaType = detectMediaType(file.originalname) || "image";
+        images = [media];
+        video = "";
+        console.log("✅ Using 'image' field:", file.originalname);
+      }
+    }
+
+    // If body explicitly says video/images, trust it when no file-type ambiguity
+    if (!finalMediaType && bodyMediaType) {
+      if (bodyMediaType === "video") finalMediaType = "video";
+      if (bodyMediaType === "images") finalMediaType = "image";
+    }
+
+    if (images.length > 0 || video || media) {
+      updateFields.media = media || (images[0] || video || "");
+      updateFields.mediaType = finalMediaType;
+      updateFields.images = images;
+      updateFields.video = video;
       // Keep image for backward compatibility if it's an image
-      if (mediaType === 'image') {
-        updateFields.image = req.file.path;
-      } else {
+      if (finalMediaType === "image" && images.length > 0) {
+        updateFields.image = images[0];
+      } else if (finalMediaType === "video") {
         updateFields.image = "";
       }
+      console.log("📤 UPDATE OFFRE - Media updated:", {
+        media: updateFields.media,
+        mediaType: finalMediaType,
+        imagesCount: images.length,
+        hasVideo: !!video,
+      });
+    } else {
+      console.log("📤 UPDATE OFFRE - No new media, keeping existing images/video");
     }
 
     const offre = await OffreSpeciale.findByIdAndUpdate(req.params.id, updateFields, { new: true });
@@ -91,9 +261,11 @@ exports.updateOffre = async (req, res) => {
     const io = req.app.get("io");
     io.emit("offreUpdated", offre);
 
+    console.log("✅ UPDATE OFFRE - Success, offre ID:", offre._id);
     res.status(200).json(offre);
   } catch (err) {
     console.error("❌ Error updating offer:", err.message);
+    console.error("❌ Error stack:", err.stack);
     res.status(500).json({ message: err.message });
   }
 };

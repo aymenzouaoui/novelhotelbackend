@@ -23,18 +23,30 @@ const offreSpecialeSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  // Legacy single image field (kept for backward compatibility)
   image: {
     type: String,
-    default: "" // Cloudinary URL or local path (deprecated, use media instead)
+    default: "" // Cloudinary URL or local path (deprecated, use media/images instead)
   },
+  // Generic single media URL (first image or video)
   media: {
     type: String,
-    default: "" // URL for image or video
+    default: "" // URL for image or video (first media)
   },
+  // Type of the single media
   mediaType: {
     type: String,
     enum: ["image", "video"],
     default: null // "image" or "video" or null if no media
+  },
+  // NEW: support multiple images
+  images: [{
+    type: String, // URLs for all images of the offer
+  }],
+  // NEW: dedicated video URL
+  video: {
+    type: String,
+    default: "" // URL for video file if any
   }
 }, { timestamps: true });
 

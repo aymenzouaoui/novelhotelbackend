@@ -19,8 +19,9 @@ app.use(cors({
     "https://novotel-tunis.com",
     "https://www.novotel-tunis.com"
   ],
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  credentials: true,
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"]
 }));
 
 // 🔹 No size limits for file uploads (unlimited)
