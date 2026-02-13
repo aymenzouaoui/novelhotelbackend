@@ -47,13 +47,12 @@ const storage = multer.diskStorage({
   },
 });
 
-// Configure multer with file size limits (unlimited for PDFs, 50MB for images)
-// Set to 1GB to effectively allow unlimited PDF uploads
+// Configure multer with very high file size limits (effectively unlimited)
 const upload = multer({ 
   storage,
   limits: {
-    fileSize: 1024 * 1024 * 1024, // 1GB per file (effectively unlimited for PDFs)
-    fieldSize: 1024 * 1024 * 1024, // 1GB for non-file fields
+    fileSize: 10 * 1024 * 1024 * 1024, // 10GB per file (effectively unlimited)
+    fieldSize: 10 * 1024 * 1024 * 1024, // 10GB for non-file fields
   }
 });
 

@@ -23,7 +23,9 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json());
+// 🔹 No size limits for file uploads (unlimited)
+app.use(express.json({ limit: '10gb' }));
+app.use(express.urlencoded({ limit: '10gb', extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // 🔹 Routes
@@ -88,6 +90,28 @@ app.use("/api/questionnaires", questionnaireRoutes);
 
 // 🔹 Gestionnaire d’erreurs global (middleware 4 arguments)
 app.use((err, req, res, next) => {
+  // Set CORS headers before sending error response
+  const origin = req.headers.origin;
+  if (origin && [
+    "https://itbafa.com",
+    "http://localhost:3000",
+    "https://novotel-tunis.com",
+    "https://www.novotel-tunis.com"
+  ].includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+  }
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+
+  // Handle specific error types
+  if (err.type === 'entity.too.large' || err.status === 413 || err.statusCode === 413) {
+    console.error("❌ File too large:", err.message);
+    return res.status(413).json({ 
+      message: "Le fichier est trop volumineux. Vérifiez la configuration du serveur." 
+    });
+  }
+
   console.error("❌ Route error:", err.message);
   const status = err.status || err.statusCode || 500;
   const message = err.message || "Erreur serveur";
