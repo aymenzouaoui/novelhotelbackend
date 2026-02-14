@@ -4,6 +4,10 @@ const itemSchema = new mongoose.Schema({
   name: String,
   description: String,
   price: Number,
+  translations: {
+    fr: { name: { type: String, default: "" }, description: { type: String, default: "" } },
+    ar: { name: { type: String, default: "" }, description: { type: String, default: "" } },
+  },
   isVegetarian: {
     type: Boolean,
     default: false,
@@ -109,6 +113,11 @@ const menuSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "SkyLounge",
     required: false,
+  },
+  // Traductions fr / ar (titre du menu)
+  translations: {
+    fr: { title: { type: String, default: "", trim: true } },
+    ar: { title: { type: String, default: "", trim: true } },
   },
 }, { timestamps: true });
 

@@ -1,5 +1,30 @@
 const OffreSpeciale = require("../models/OffreSpeciale");
 
+const SUPPORTED_LANGS = ["fr", "ar"];
+
+function parseTranslations(translations) {
+  if (!translations) return null;
+  if (typeof translations === "object") return translations;
+  if (typeof translations !== "string") return null;
+  try {
+    return JSON.parse(translations);
+  } catch {
+    return null;
+  }
+}
+
+function resolveOffreForLang(offre, lang) {
+  if (!offre || !lang || !SUPPORTED_LANGS.includes(lang)) return offre;
+  const doc = offre.toObject ? offre.toObject() : { ...offre };
+  const t = doc.translations && doc.translations[lang];
+  if (!t) return doc;
+  return {
+    ...doc,
+    title: (t.title && String(t.title).trim()) ? t.title : doc.title,
+    description: (t.description != null && String(t.description) !== "") ? t.description : doc.description,
+  };
+}
+
 // Helper function to detect media type from file extension
 function detectMediaType(filename) {
   if (!filename) return null;
@@ -16,14 +41,8 @@ exports.createOffre = async (req, res) => {
   try {
     // 🔍 LOG: Request body and files
     console.log("📥 CREATE OFFRE - Request body:", {
-      title: req.body.title,
-      description: req.body.description,
-      discountPercentage: req.body.discountPercentage,
-      startDate: req.body.startDate,
-      endDate: req.body.endDate,
-      active: req.body.active,
-      mediaType: req.body.mediaType,
-      existingImages: req.body.existingImages
+      title:req.body
+      
     });
     
     console.log("📁 CREATE OFFRE - Request files:", req.files ? Object.keys(req.files) : "No files");
@@ -33,7 +52,8 @@ exports.createOffre = async (req, res) => {
       });
     }
 
-    const { title, description, discountPercentage, startDate, endDate, active, mediaType: bodyMediaType, existingImages } = req.body;
+    const { title, description, discountPercentage, startDate, endDate, active, mediaType: bodyMediaType, existingImages, translations: rawTranslations } = req.body;
+    const translations = parseTranslations(rawTranslations);
     
     let images = [];
     let video = "";
@@ -100,8 +120,15 @@ exports.createOffre = async (req, res) => {
       mediaType: finalMediaType,
       images,
       video,
-      // Keep image for backward compatibility (first image only)
       image: media && finalMediaType === "image" ? media : "",
+      translations: {
+        fr: (translations && translations.fr)
+          ? { title: String(translations.fr.title ?? "").trim(), description: translations.fr.description != null ? String(translations.fr.description) : "" }
+          : { title: "", description: "" },
+        ar: (translations && translations.ar)
+          ? { title: String(translations.ar.title ?? "").trim(), description: translations.ar.description != null ? String(translations.ar.description) : "" }
+          : { title: "", description: "" },
+      },
     });
 
     console.log("💾 CREATE OFFRE - Saving offre with images array:", offre.images);
@@ -111,8 +138,9 @@ exports.createOffre = async (req, res) => {
     const io = req.app.get("io");
     io.emit("offreCreated", offre);
 
+    const lang = req.query.lang && SUPPORTED_LANGS.includes(req.query.lang) ? req.query.lang : null;
     console.log("✅ CREATE OFFRE - Success, offre ID:", offre._id);
-    res.status(201).json(offre);
+    res.status(201).json(lang ? resolveOffreForLang(offre, lang) : offre);
   } catch (err) {
     console.error("❌ Error creating offer:", err.message);
     console.error("❌ Error stack:", err.stack);
@@ -122,8 +150,10 @@ exports.createOffre = async (req, res) => {
 
 exports.getAllOffres = async (req, res) => {
   try {
+    const lang = req.query.lang && SUPPORTED_LANGS.includes(req.query.lang) ? req.query.lang : null;
     const offres = await OffreSpeciale.find();
-    res.status(200).json(offres);
+    const payload = lang ? offres.map((o) => resolveOffreForLang(o, lang)) : offres;
+    res.status(200).json(payload);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -131,9 +161,10 @@ exports.getAllOffres = async (req, res) => {
 
 exports.getOffreById = async (req, res) => {
   try {
+    const lang = req.query.lang && SUPPORTED_LANGS.includes(req.query.lang) ? req.query.lang : null;
     const offre = await OffreSpeciale.findById(req.params.id);
     if (!offre) return res.status(404).json({ message: "Offre not found" });
-    res.status(200).json(offre);
+    res.status(200).json(lang ? resolveOffreForLang(offre, lang) : offre);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -161,7 +192,8 @@ exports.updateOffre = async (req, res) => {
       });
     }
 
-    const { title, description, discountPercentage, startDate, endDate, active, mediaType: bodyMediaType, existingImages } = req.body;
+    const { title, description, discountPercentage, startDate, endDate, active, mediaType: bodyMediaType, existingImages, translations: rawTranslations } = req.body;
+    const translations = parseTranslations(rawTranslations);
     
     const updateFields = {
       title,
@@ -255,14 +287,30 @@ exports.updateOffre = async (req, res) => {
       console.log("📤 UPDATE OFFRE - No new media, keeping existing images/video");
     }
 
-    const offre = await OffreSpeciale.findByIdAndUpdate(req.params.id, updateFields, { new: true });
+    if (translations && typeof translations === "object") {
+      if (translations.fr != null) {
+        updateFields["translations.fr"] = {
+          title: String(translations.fr.title ?? "").trim(),
+          description: translations.fr.description != null ? String(translations.fr.description) : "",
+        };
+      }
+      if (translations.ar != null) {
+        updateFields["translations.ar"] = {
+          title: String(translations.ar.title ?? "").trim(),
+          description: translations.ar.description != null ? String(translations.ar.description) : "",
+        };
+      }
+    }
+
+    const offre = await OffreSpeciale.findByIdAndUpdate(req.params.id, { $set: updateFields }, { new: true });
     if (!offre) return res.status(404).json({ message: "Offre not found" });
 
     const io = req.app.get("io");
     io.emit("offreUpdated", offre);
 
+    const lang = req.query.lang && SUPPORTED_LANGS.includes(req.query.lang) ? req.query.lang : null;
     console.log("✅ UPDATE OFFRE - Success, offre ID:", offre._id);
-    res.status(200).json(offre);
+    res.status(200).json(lang ? resolveOffreForLang(offre, lang) : offre);
   } catch (err) {
     console.error("❌ Error updating offer:", err.message);
     console.error("❌ Error stack:", err.stack);

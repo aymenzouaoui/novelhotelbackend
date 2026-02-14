@@ -1,22 +1,27 @@
 const mongoose = require("mongoose");
 
 const spaServiceSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true },   // e.g. "SILHOUETTE FINE 90MN"
-  description: { type: String, default: "" },           // e.g. "Gommage / Scrub + ..."
-  duration: { type: String, default: "" },              // e.g. "90mn" or "1H25"
+  name: { type: String, required: true, trim: true },
+  description: { type: String, default: "" },
+  duration: { type: String, default: "" },
   prices: {
-    TND: { type: Number, required: true },             // local currency
-    EUR: { type: Number, required: true }              // second currency
+    TND: { type: Number, required: true },
+    EUR: { type: Number, required: true },
   },
-  reservable: { type: Boolean, default: true }          // moved here per service
+  reservable: { type: Boolean, default: true },
+  translations: {
+    fr: { name: { type: String, default: "" }, description: { type: String, default: "" } },
+    ar: { name: { type: String, default: "" }, description: { type: String, default: "" } },
+  },
 });
 
 const spaCategorySchema = new mongoose.Schema({
-  title: { type: String, required: true, trim: true },  // e.g. "FORFAITS / PACKAGE"
+  title: { type: String, required: true, trim: true },
   services: [spaServiceSchema],
-    image: {
-    type: String,
-    default: "" // Cloudinary URL or local path
+  image: { type: String, default: "" },
+  translations: {
+    fr: { title: { type: String, default: "", trim: true } },
+    ar: { title: { type: String, default: "", trim: true } },
   },
 });
 

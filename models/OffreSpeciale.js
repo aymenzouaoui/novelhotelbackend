@@ -47,7 +47,18 @@ const offreSpecialeSchema = new mongoose.Schema({
   video: {
     type: String,
     default: "" // URL for video file if any
-  }
+  },
+  // Traductions fr / ar
+  translations: {
+    fr: {
+      title: { type: String, default: "", trim: true },
+      description: { type: String, default: "" },
+    },
+    ar: {
+      title: { type: String, default: "", trim: true },
+      description: { type: String, default: "" },
+    },
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model("OffreSpeciale", offreSpecialeSchema);

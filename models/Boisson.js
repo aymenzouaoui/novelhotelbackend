@@ -27,9 +27,20 @@ const boissonSchema = new mongoose.Schema({
     ref: "CategoryBoisson",
     required: true
   },
-    image: { 
-      type: String,
-      default: "" 
+  image: {
+    type: String,
+    default: "",
+  },
+  // Traductions fr / ar
+  translations: {
+    fr: {
+      title: { type: String, default: "", trim: true },
+      description: { type: String, default: "" },
+    },
+    ar: {
+      title: { type: String, default: "", trim: true },
+      description: { type: String, default: "" },
+    },
   },
 }, { timestamps: true });
 

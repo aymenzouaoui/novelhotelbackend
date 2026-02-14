@@ -18,7 +18,18 @@ const restaurantSchema = new mongoose.Schema({
   reservable: {
     type: Boolean,
     default: true // true means users can reserve by default
-  }
+  },
+  // Traductions fr / ar
+  translations: {
+    fr: {
+      name: { type: String, default: "", trim: true },
+      description: { type: String, default: "" },
+    },
+    ar: {
+      name: { type: String, default: "", trim: true },
+      description: { type: String, default: "" },
+    },
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model("Restaurant", restaurantSchema);

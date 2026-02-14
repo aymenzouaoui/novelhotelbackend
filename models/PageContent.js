@@ -14,6 +14,17 @@ const pageContentSchema = new mongoose.Schema({
     type: String,
     default: "", // optional
   },
+  // Traductions fr / ar
+  translations: {
+    fr: {
+      pageName: { type: String, default: "", trim: true },
+      description: { type: String, default: "" },
+    },
+    ar: {
+      pageName: { type: String, default: "", trim: true },
+      description: { type: String, default: "" },
+    },
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model("PageContent", pageContentSchema);
