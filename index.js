@@ -55,6 +55,7 @@ const spaCategoryRoutes = require("./routes/spaCategoryRoutes");
 const questionnaireRoutes = require("./routes/questionnaireRoutes");
 const skipCleanRoutes = require("./routes/skipCleanRoutes");
 const questionnaireResponseRoutes = require("./routes/questionnaireResponseRoutes");
+const translationRoutes = require("./routes/translationRoutes");
 
 // 🔹 Middleware pour log des requêtes
 app.use((req, res, next) => {
@@ -88,6 +89,7 @@ app.use("/api/roomservice-orders", roomServiceOrderRoutes);
 app.use("/api/page-contents", pageContentRoutes);
 app.use("/api/spa-categories", spaCategoryRoutes);
 app.use("/api/questionnaires", questionnaireRoutes);
+app.use("/api/translate", translationRoutes);
 
 // 🔹 Gestionnaire d’erreurs global (middleware 4 arguments)
 app.use((err, req, res, next) => {
