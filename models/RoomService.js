@@ -10,6 +10,17 @@ const roomServiceSchema = new mongoose.Schema({
     type: String,
     default: ""
   },
+  // Traductions fr / ar
+  translations: {
+    fr: {
+      name: { type: String, default: "", trim: true },
+      description: { type: String, default: "" },
+    },
+    ar: {
+      name: { type: String, default: "", trim: true },
+      description: { type: String, default: "" },
+    },
+  },
   menus: [
     {
       type: mongoose.Schema.Types.ObjectId,
