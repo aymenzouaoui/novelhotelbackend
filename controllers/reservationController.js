@@ -29,13 +29,7 @@ async function sendReservationNotification(reservation) {
 
     if (!users || users.length === 0) return;
 
-    const emails = users.map(u => u.email);
-
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: emails,
-      subject: "Nouvelle réservation",
-      text: `Bonjour,\n\nUne nouvelle réservation a été effectuée par ${reservation.name} pour ${reservation.service} à ${new Date(reservation.to).toLocaleString()}.\nRoom: ${reservation.room}\n\nMerci.\nL'équipe Novotel.`
+    if (!users || users.length === 0) return;ur,\n\nUne nouvelle réservation a été effectuée par ${reservation.name} pour ${reservation.service} à ${new Date(reservation.to).toLocaleString()}.\nRoom: ${reservation.room}\n\nMerci.\nL'équipe Novotel.`
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
