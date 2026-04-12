@@ -17,31 +17,46 @@ const transporter = nodemailer.createTransport({
 
 async function sendReservationNotification(reservation) {
   try {
-    // Create a case-insensitive regex for the service
-    const serviceRegex = new RegExp(`^${reservation.service}$`, "i"); // matches exact, ignoring case
+    // Regex insensible à la casse pour le service
+    const serviceRegex = new RegExp(`^${reservation.service}$`, "i");
 
-    // Find all users with role 'admin' or matching reservation service (case-insensitive)
+    // Trouver les users admin OU ayant un rôle = service
     const users = await User.find({
-      role: { $elemMatch: { $in: ["admin"] } } // admin always included
-    }).or([
-      { role: serviceRegex } // matches any role exactly like the service ignoring case
-    ]);
+      $or: [
+        { role: "admin" },                 // si role est string
+        { role: { $in: ["admin"] } },      // si role est array
+        { role: serviceRegex },            // match service (string)
+        { role: { $elemMatch: { $regex: serviceRegex } } } // match service (array)
+      ]
+    });
 
     if (!users || users.length === 0) return;
 
-    if (!users || users.length === 0) return;ur,\n\nUne nouvelle réservation a été effectuée par ${reservation.name} pour ${reservation.service} à ${new Date(reservation.to).toLocaleString()}.\nRoom: ${reservation.room}\n\nMerci.\nL'équipe Novotel.`
+    // récupérer les emails
+    const emails = users.map(user => user.email).filter(Boolean);
+
+    if (emails.length === 0) return;
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: emails.join(","), // envoyer à plusieurs utilisateurs
+      subject: "Nouvelle réservation",
+      text: `Bonjour,
+
+Une nouvelle réservation a été effectuée par ${reservation.name} 
+pour ${reservation.service} à ${new Date(reservation.to).toLocaleString()}.
+
+Room: ${reservation.room}
+
+Merci.
+L'équipe Novotel.`
     };
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("Erreur d'envoi d'email :", error);
-      } else {
-        console.log("Email envoyé aux responsables :", info.response);
-      }
-    });
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Email envoyé :", info.response);
 
   } catch (err) {
-    console.error("Erreur lors de l'envoi des emails de notification :", err.message);
+    console.error("Erreur lors de l'envoi des emails :", err.message);
   }
 }
 
